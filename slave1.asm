@@ -16,7 +16,8 @@
 	ENDC
 	
 	CBLOCK	0x20
-	    data_adr:6, data_received:6, i
+	    i
+	    data_adr:6, data_received:6
 	    counter, mask1, mask2
 	ENDC
 	
@@ -57,15 +58,19 @@ counter_routine:
 	IORWF	counter, W
 	MOVWF	PORTA
 	
-	MOVLW	b'00011111'
+	MOVLW	b'x1x01111'
 	SUBWF	counter, W
 	BTFSC	STATUS, Z
-	GOTO	equal
+	GOTO	equal1
+	MOVLW	b'x0x11111'
+	SUBWF	counter, W
+	BTFSC	STATUS, Z
+	GOTO	equal2
 	BSF	STATUS, C
 	RLF	counter
 	RETURN
 equal:
-	MOVLF	b'11111110', counter
+	MOVLF	b'x0x11111', counter
 	RETURN
 	
 display_data:
@@ -74,9 +79,9 @@ display_data:
 	
 ;--------------------SETUP--------------------
 setup:
-	MOVLF	b'11111110', counter
-	MOVLF	b'00111111', mask1
-	MOVLF	b'11000000', mask2
+	MOVLF	b'01011110', counter
+	MOVLF	b'01011111', mask1
+	MOVLF	b'10100000', mask2
 	MOVLF	b'10100000', TRISA
 	MOVLF	b'11100001', TRISB
 	MOVLF	b'10010000', INTCON
