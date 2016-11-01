@@ -1,4 +1,4 @@
-#include "p16F628A.inc"
+#include "p16f628a.inc"
 #include "utils.inc"
     
 ; CONFIG
@@ -27,6 +27,22 @@
 ;----------------INT HANDLERS----------------
 getDataIn:
 	MOVLF	0x00, dataIn
+	MOVF	dataInMask1, W
+	ANDWF	PORTA, W
+	MOVWF	dataIn
+	MOVF	dataInMask2, W
+	ANDWF	PORTB, W
+	MOVWF	aux
+	BCF	STATUS, C
+	RRF	aux, W
+	MOVF	aux, W
+	IORWF	dataIn, F
+	MOVLF	0x04, i
+loop3:	
+	BCF	STATUS, C
+	RRF	dataIn, F
+	DECFSZ	i
+	GOTO	loop3
 	RETURN
 	
 intHandler:
@@ -72,7 +88,7 @@ diff5:
 	RETURN
 	
 updateDisplay:
-	MOVLW	0x05, i
+	MOVLF	0x06, i
 loop2:
 	ASI	dataReceivedAddr, i
 	MOVFF   INDF, aux
@@ -130,7 +146,7 @@ loop1:
 setup:
 	MOVLF	0x00, id    ;0x00 -> Slave1 
 			    ;0x0F -> Slave2
-	MOVLF	0x05, pos
+	MOVLF	0x06, pos
 	MOVLF	d'241', t0
 	MOVLF	b'01011111', counterMask1
 	MOVLF	b'10100000', counterMask2
@@ -157,7 +173,7 @@ mainLoop:
 	CALL	displayData
 	DECFSZ	pos
 	GOTO	mainLoop
-	MOVLF	0x05, pos
+	MOVLF	0x06, pos
 	GOTO	mainLoop
 	
 	END
