@@ -18,8 +18,8 @@ ASI	macro	baseAddr, index
 	    MOVLF   baseAddr, FSR
 	    BANKSEL index
 	    MOVF    index, W
-	    BANKSEL baseAddr
-	    ADDWF   baseAddr, F
+	    BANKSEL FSR
+	    ADDWF   FSR, F
 	endm
 	
 #endif

@@ -34,7 +34,7 @@ getDataIn:
 	ANDWF	PORTB, W
 	MOVWF	aux
 	BCF	STATUS, C
-	RRF	aux, W
+	RRF	aux, F
 	MOVF	aux, W
 	IORWF	dataIn, F
 	MOVLF	0x04, i
@@ -47,18 +47,18 @@ loop3:
 	
 intHandler:
 	BCF	INTCON, INTE
+	BCF	INTCON, T0IF
 	BCF	INTCON,	INTF
 	
 	CALL	getDataIn
 	MOVF	id, W
-	SUBWF	dataIn
+	SUBWF	dataIn, W
 	BTFSS	STATUS, Z
 	RETURN
 	
-	BTFSS	PORTB, RA5        ;int_type
-	CALL	startReceiveData  ;int_type 0
-	CALL	updateDisplay	  ;int_type 1
-	RETURN
+	BTFSS	PORTA, RA5        ;int_type
+	GOTO	startReceiveData  ;int_type 0
+	GOTO	updateDisplay	  ;int_type 1
 	
 startReceiveData:
 	MOVLF	0x00, i
@@ -70,7 +70,7 @@ receiveData:
 	BCF	INTCON, T0IE
 	BCF	INTCON, T0IF
 	CALL	getDataIn
-	ASI	dataAddr, i
+	ASI	dataReceivedAddr, i
 	MOVFF   dataIn, INDF
 	
 	MOVLW	0x05
@@ -108,7 +108,7 @@ getCounterValue:
 	RETLW	b'01010111'
 	RETLW	b'01001111'
 	RETLW	b'00011111'
-	
+	;01011111
 counterRoutine:
 	CALL	getCounterValue
 	MOVWF	counterOutput
@@ -123,6 +123,8 @@ counterRoutine:
 displayData:
 	ASI	dataAddr, pos
 	MOVFF	INDF, dataOut
+	BCF	STATUS, C
+	RLF	dataOut, F
 	MOVF	dataOutMask1, W
 	ANDWF	dataOut, F
 	MOVF	dataOutMask2, W
@@ -133,13 +135,14 @@ displayData:
 	
 ;--------------------SETUP--------------------
 clearData:
-	MOVLF	0x0C, i
+	MOVLF	0x00, i
 loop1:
-	DECF	i
 	ASI	dataAddr, i
 	INCF	i
 	MOVLF	0x00, INDF
-	DECFSZ	i
+	MOVLW	0x0C
+	SUBWF	i, W
+	BTFSS	STATUS, Z
 	GOTO	loop1
 	RETURN
 
@@ -147,7 +150,7 @@ setup:
 	MOVLF	0x00, id    ;0x00 -> Slave1 
 			    ;0x0F -> Slave2
 	MOVLF	0x06, pos
-	MOVLF	d'241', t0
+	MOVLF	d'245', t0  ;180us
 	MOVLF	b'01011111', counterMask1
 	MOVLF	b'10100000', counterMask2
 	MOVLF	b'00011110', dataOutMask1
@@ -169,9 +172,12 @@ setup:
 	
 ;----------------MAIN_LOOP----------------
 mainLoop:
+	DECF	pos
 	CALL	counterRoutine
 	CALL	displayData
-	DECFSZ	pos
+	MOVLW	0x00
+	SUBWF	pos
+	BTFSS	STATUS, Z
 	GOTO	mainLoop
 	MOVLF	0x06, pos
 	GOTO	mainLoop
