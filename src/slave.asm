@@ -66,6 +66,18 @@ startReceiveData:
 	BSF	INTCON, T0IE
 	RETURN
 
+updateDisplay:
+	MOVLF	0x06, i
+loop2:
+	ASI	dataReceivedAddr, i
+	MOVFF   INDF, aux
+	ASI	dataAddr, i
+	MOVFF   aux, INDF
+	DECFSZ	i
+	GOTO	loop2
+	BSF	INTCON, INTE
+	RETURN
+	
 receiveData:
 	BCF	INTCON, T0IE
 	BCF	INTCON, T0IF
@@ -87,18 +99,6 @@ diff5:
 	BSF	INTCON, T0IE
 	RETURN
 	
-updateDisplay:
-	MOVLF	0x06, i
-loop2:
-	ASI	dataReceivedAddr, i
-	MOVFF   INDF, aux
-	ASI	dataAddr, i
-	MOVFF   aux, INDF
-	DECFSZ	i
-	GOTO	loop2
-	BSF	INTCON, INTE
-	RETURN
-	
 ;----------------ROUTINES----------------
 getCounterValue:
 	ADDWF	PCL, pos
@@ -108,7 +108,7 @@ getCounterValue:
 	RETLW	b'01010111'
 	RETLW	b'01001111'
 	RETLW	b'00011111'
-	;01011111
+	
 counterRoutine:
 	CALL	getCounterValue
 	MOVWF	counterOutput
