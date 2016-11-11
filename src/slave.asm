@@ -1,4 +1,4 @@
-#include "p16f628a.inc"
+#include "p16F628A.inc"
 #include "utils.inc"
     
 ; CONFIG
@@ -6,12 +6,15 @@
  __CONFIG _FOSC_INTOSCIO & _WDTE_OFF & _PWRTE_OFF & _MCLRE_OFF & _BOREN_OFF & _LVP_OFF & _CPD_OFF & _CP_OFF
 	
 	CBLOCK	0x20
-	    i, aux, pos, id, t0
+	    i, aux, pos, id
+	    receiveTime, waitTime
 	    dataAddr:6, dataReceivedAddr:6
 	    counterMask1, counterMask2
 	    dataOutMask1, dataOutMask2
 	    dataInMask1, dataInMask2
 	    counterOutput, dataOut, dataIn
+	    receiveCounter
+	    flags, sync, receive, wait
 	ENDC
 	
 	ORG	0x00
@@ -19,9 +22,9 @@
 	
 	ORG	0x04
 	BTFSC	INTCON, INTF
-	CALL	intHandler
+	CALL	startSyncDelay
 	BTFSC	INTCON, T0IF
-	CALL	receiveData
+	CALL	handleTimeOut
 	RETFIE
 	
 ;----------------INT HANDLERS----------------
@@ -45,63 +48,111 @@ loop3:
 	GOTO	loop3
 	RETURN
 	
-intHandler:
+
+startSyncDelay:
 	BCF	INTCON, INTE
-	BCF	INTCON, T0IF
 	BCF	INTCON,	INTF
 	
+	CLRF	flags
+	CLRF	receiveCounter
+	BSF	flags, sync
+	MOVFF	receiveTime, TMR0
+	BSF	INTCON, T0IE
+	RETURN
+	
+;----------------TIMEOUT----------------
+handleTimeOut:
+	BCF	INTCON, T0IE
+	BCF	INTCON, T0IF
+    
+	BTFSC	flags, sync
+	GOTO	receiveHandler
+	BTFSC	flags, receive
+	GOTO	waitHandler
+	BTFSC	flags, wait
+	GOTO	receiveHandler
+	RETURN
+	
+waitHandler:
+	CLRF	flags
+	BSF	flags, wait
+	
+	MOVFF	waitTime, TMR0
+	BSF	INTCON, T0IE
+	RETURN
+	
+receiveHandler:
+	CLRF	flags
+	BSF	flags, receive
+	
+	;choose type of interrupt
+	BTFSC	PORTB, RA5      ;int_type
+	GOTO	updateDisplay	;int_type = 1
+	GOTO	receiveData	;int_type = 0
+	
+receiveData:
+	;check end of receive data
+	MOVLW	0x07
+	SUBWF	receiveCounter, W
+	BTFSS	STATUS, Z
+	GOTO	endReceive
+	GOTO	continue
+	
+endreceive:
+	BSF	INTCON, INTE
+	RETURN
+	
+continue:
 	CALL	getDataIn
+	
+	MOVLW	0x00
+	SUBWF	receiveCounter
+	BTFSC	STATUS, Z
+	GOTO	first
+	GOTO	other
+first:
 	MOVF	id, W
-	SUBWF	dataIn, W
+	SUBWF	dataIn
 	BTFSS	STATUS, Z
 	RETURN
 	
-	BTFSS	PORTA, RA5        ;int_type
-	GOTO	startReceiveData  ;int_type 0
-	GOTO	updateDisplay	  ;int_type 1
-	
-startReceiveData:
-	MOVLF	0x00, i
-	MOVFF	t0, TMR0
+	INCF	receiveCounter
+	MOVFF	receiveTime, TMR0
 	BSF	INTCON, T0IE
 	RETURN
-
+other:
+	ASI	dataAddr, receiveCounter
+	MOVFF   dataIn, INDF
+	INCF	receiveCounter
+	MOVFF	receiveTime, TMR0
+	BSF	INTCON, T0IE
+	RETURN
+	
 updateDisplay:
+	CALL	getDataIn
+	MOVF	id, W
+	SUBWF	dataIn
+	BTFSS	STATUS, Z
+	RETURN
+    
 	MOVLF	0x06, i
 loop2:
+	DECF	i
 	ASI	dataReceivedAddr, i
 	MOVFF   INDF, aux
 	ASI	dataAddr, i
+	INCF	i
 	MOVFF   aux, INDF
 	DECFSZ	i
 	GOTO	loop2
 	BSF	INTCON, INTE
 	RETURN
 	
-receiveData:
-	BCF	INTCON, T0IE
-	BCF	INTCON, T0IF
-	CALL	getDataIn
-	ASI	dataReceivedAddr, i
-	MOVFF   dataIn, INDF
-	
-	MOVLW	0x05
-	SUBWF	i
-	BTFSC	STATUS, Z
-	GOTO	equal5
-	GOTO	diff5
-equal5:
-	BSF	INTCON, INTE
-	RETURN
-diff5:
-	INCF	i
-	MOVFF	t0, TMR0
-	BSF	INTCON, T0IE
-	RETURN
-	
 ;----------------ROUTINES----------------
 getCounterValue:
-	ADDWF	PCL, pos
+	MOVF	pos, W
+	ADDWF	PCL, F
+	NOP
 	RETLW	b'01011110'
 	RETLW	b'01011101'
 	RETLW	b'01011011'
@@ -121,10 +172,14 @@ counterRoutine:
 	RETURN
 	
 displayData:
+	DECF	pos
 	ASI	dataAddr, pos
+	INCF	pos
 	MOVFF	INDF, dataOut
-	BCF	STATUS, C
-	RLF	dataOut, F
+	
+	MOVLW	b'00011100'
+	MOVWF	dataOut
+	
 	MOVF	dataOutMask1, W
 	ANDWF	dataOut, F
 	MOVF	dataOutMask2, W
@@ -135,14 +190,13 @@ displayData:
 	
 ;--------------------SETUP--------------------
 clearData:
-	MOVLF	0x00, i
+	MOVLF	0x0C, i
 loop1:
+	DECF	i
 	ASI	dataAddr, i
 	INCF	i
 	MOVLF	0x00, INDF
-	MOVLW	0x0C
-	SUBWF	i, W
-	BTFSS	STATUS, Z
+	DECFSZ	i
 	GOTO	loop1
 	RETURN
 
@@ -150,7 +204,12 @@ setup:
 	MOVLF	0x00, id    ;0x00 -> Slave1 
 			    ;0x0F -> Slave2
 	MOVLF	0x06, pos
-	MOVLF	d'245', t0  ;180us
+	MOVLF	0x00, flags
+	MOVLF	0x00, sync
+	MOVLF	0x01, receive
+	MOVLF	0x02, wait
+	MOVLF	d'000', receiveTime ;1ms
+	MOVLF	d'000', waitTime    ;3ms
 	MOVLF	b'01011111', counterMask1
 	MOVLF	b'10100000', counterMask2
 	MOVLF	b'00011110', dataOutMask1
@@ -167,19 +226,16 @@ setup:
 	BANKSEL	PORTA
 	CLRF	PORTA
 	CLRF	PORTB
-	
 	CALL	clearData
 	
 ;----------------MAIN_LOOP----------------
 mainLoop:
-	DECF	pos
 	CALL	counterRoutine
 	CALL	displayData
-	MOVLW	0x00
-	SUBWF	pos
-	BTFSS	STATUS, Z
+	DECFSZ	pos
 	GOTO	mainLoop
 	MOVLF	0x06, pos
 	GOTO	mainLoop
 	
 	END
+	
