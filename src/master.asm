@@ -10,7 +10,8 @@
 	    flags, isEqual
 	    slave1, slave2
 	    sendTime, holdTime, buzzerTime
-	    dataOutMask, sendCounter
+	    dataOutMask1, dataOutMask2
+	    sendCounter
 	    dataReceivedAddr:6, slave1DataAddr:6
 	    dataOutAddr:6
 	    timeParam, addr1Param, addr2Param
@@ -65,22 +66,6 @@ update:
 	
 	RETURN
 	
-copyArray:
-	;(addr1Param, addr2Param)
-	;addr1Param = addr2Param
-	MOVLF	0x00, i
-loop4:
-	ASI	addr2Param, i
-	MOVFF	INDF, aux
-	ASI	addr1Param, i
-	MOVFF	aux, INDF
-	INCF	i
-	MOVLW	0x06
-	SUBWF	i, W
-	BTFSS	STATUS, Z
-	GOTO	loop4
-	RETURN
-	
 handleBtnPressed:
 	MOVFF	slave1, targetID
 	CALL	setDataTest1
@@ -115,6 +100,22 @@ delay_ms:
 	;(timeParam)
 	DECFSZ	timeParam
 	GOTO	delay_ms
+	RETURN
+	
+copyArray:
+	;(addr1Param, addr2Param)
+	;addr1Param = addr2Param
+	MOVLF	0x00, i
+loop4:
+	ASI	addr2Param, i
+	MOVFF	INDF, aux
+	ASI	addr1Param, i
+	MOVFF	aux, INDF
+	INCF	i
+	MOVLW	0x06
+	SUBWF	i, W
+	BTFSS	STATUS, Z
+	GOTO	loop4
 	RETURN
 	
 setDataTest1:
@@ -224,7 +225,9 @@ others:
 	INCF	sendCounter
 	MOVFF	INDF, dataOut
 final:
-	MOVF	dataOutMask, W
+	MOVF	dataOutMask1, W
+	ANDWF	dataOut, F
+	MOVF	dataOutMask2, W
 	ANDWF	PORTA, W
 	IORWF	dataOut, F
 	MOVFF	dataOut, PORTA
@@ -271,7 +274,8 @@ setup:
 	MOVLF	0x00, isEqual
 	MOVLF	d'16', sendTime  ;1ms
 	MOVLF	d'47', holdTime  ;3ms
-	MOVLF	b'11110001', dataOutMask
+	MOVLF	b'00001111', dataOutMask1
+	MOVLF	b'11110000', dataOutMask2
 	MOVLF	b'11100000', TRISA
 	MOVLF	b'11100011', TRISB
 	MOVLF	b'11000000', INTCON
