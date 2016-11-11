@@ -82,18 +82,18 @@ loop4:
 	RETURN
 	
 handleBtnPressed:
-	MOVLF	slave1, targetID
+	MOVFF	slave1, targetID
 	CALL	setDataTest1
 	CALL	sendDataToSlave
 	
-	MOVLF	slave2, targetID
+	MOVFF	slave2, targetID
 	CALL	setDataTest2
 	CALL	sendDataToSlave
 	
-	MOVLF	slave1, targetID
+	MOVFF	slave1, targetID
 	CALL	updateDisplay
 	
-	MOVLF	slave2, targetID
+	MOVFF	slave2, targetID
 	CALL	updateDisplay
 	
 	CALL	triggerBuzzer
@@ -107,7 +107,7 @@ buzzerDelay:
 loop1:
 	DECFSZ	i
 	GOTO	loop1
-	DECFSZ	buzzerTimer
+	DECFSZ	buzzerTime
 	GOTO	loop1
 	RETURN
 
@@ -216,7 +216,7 @@ sendData:
 	GOTO	first
 	GOTO	others
 first:
-	MOVFF	targetId, dataOut
+	MOVFF	targetID, dataOut
 	GOTO	final
 others:
 	DECF	sendCounter
@@ -235,7 +235,7 @@ final:
 ;----------------UPDATE DISPLAY----------------
 updateDisplay:
 	;(targetID)
-	MOVFF	targetId, dataOut
+	MOVFF	targetID, dataOut
 	
 	MOVF	dataOutMask, W
 	ANDWF	PORTA, W
@@ -254,14 +254,14 @@ triggerBuzzer:
 ;--------------------SETUP--------------------
 clearData:
 	MOVLF	0x00, i
-loop1:
+loop5:
 	ASI	dataReceivedAddr, i
 	INCF	i
 	MOVLF	0x00, INDF
 	MOVLW	0x12
 	SUBWF	i, W
 	BTFSS	STATUS, Z
-	GOTO	loop1
+	GOTO	loop5
 	RETURN
 
 setup:
