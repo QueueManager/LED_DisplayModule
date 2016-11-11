@@ -98,7 +98,7 @@ receiveData:
 	GOTO	endReceive
 	GOTO	continue
 	
-endreceive:
+endReceive:
 	BSF	INTCON, INTE
 	RETURN
 	
