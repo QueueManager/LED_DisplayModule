@@ -106,13 +106,13 @@ continue:
 	CALL	getDataIn
 	
 	MOVLW	0x00
-	SUBWF	receiveCounter
+	SUBWF	receiveCounter, W
 	BTFSC	STATUS, Z
 	GOTO	first
 	GOTO	other
 first:
 	MOVF	id, W
-	SUBWF	dataIn
+	SUBWF	dataIn, W
 	BTFSS	STATUS, Z
 	RETURN
 	
@@ -131,7 +131,7 @@ other:
 updateDisplay:
 	CALL	getDataIn
 	MOVF	id, W
-	SUBWF	dataIn
+	SUBWF	dataIn, W
 	BTFSS	STATUS, Z
 	RETURN
     
@@ -208,8 +208,8 @@ setup:
 	MOVLF	0x00, sync
 	MOVLF	0x01, receive
 	MOVLF	0x02, wait
-	MOVLF	d'000', receiveTime ;1ms
-	MOVLF	d'000', waitTime    ;3ms
+	MOVLF	d'245', receiveTime ;1ms
+	MOVLF	d'221', waitTime    ;3ms
 	MOVLF	b'01011111', counterMask1
 	MOVLF	b'10100000', counterMask2
 	MOVLF	b'00011110', dataOutMask1
