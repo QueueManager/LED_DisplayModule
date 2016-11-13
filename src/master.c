@@ -5,18 +5,32 @@
  * Created on 13 de Novembro de 2016, 09:36
  */
 
-#include <xc.h>
+// PIC16F628A Configuration Bit Settings
 
-#define _XTAL_FREQ      48000
+// 'C' source line config statements
+
+// CONFIG
+#pragma config FOSC = INTOSCCLK // Oscillator Selection bits (INTOSC oscillator: CLKOUT function on RA6/OSC2/CLKOUT pin, I/O function on RA7/OSC1/CLKIN)
+#pragma config WDTE = OFF       // Watchdog Timer Enable bit (WDT disabled)
+#pragma config PWRTE = OFF      // Power-up Timer Enable bit (PWRT disabled)
+#pragma config MCLRE = OFF      // RA5/MCLR/VPP Pin Function Select bit (RA5/MCLR/VPP pin function is digital input, MCLR internally tied to VDD)
+#pragma config BOREN = OFF      // Brown-out Detect Enable bit (BOD disabled)
+#pragma config LVP = OFF        // Low-Voltage Programming Enable bit (RB4/PGM pin has digital I/O function, HV on MCLR must be used for programming)
+#pragma config CPD = OFF        // Data EE Memory Code Protection bit (Data memory code protection off)
+#pragma config CP = OFF         // Flash Program Memory Code Protection bit (Code protection off)
+
+// #pragma config statements should precede project file includes.
+// Use project enums instead of #define for ON and OFF.
+
+#include <xc.h>
 
 #define slave1          0x00
 #define slave2          0x0F
-#define sendDataTime    1
-#define holdTime        3
-#define buzzerTime      2000
+#define sendDataTime    12
+#define holdTime        36
+#define buzzerTime      12000
 #define mask1           0b00001111
 #define mask2           0b11110000
-
 
 //----------GLOBAL_VARIABLES---------
 char dataSlave1[6] = {0x00};
@@ -39,7 +53,7 @@ char RX_Serial() {
 }
 
 char* getWifiData() {
-    char dataInDirty[3];
+    char dataInDirty[3] = {0x01, 0x06, 0x59};
     char dataIn[6];
     
     while (dataInCounter < 3) {
@@ -47,8 +61,7 @@ char* getWifiData() {
     }
 
     char guichet = dataInDirty[0];
-    long int password = dataInDirty[1];
-    password = dataInDirty[1] << 4;
+    long int password = dataInDirty[1] << 8;
     password = password | dataInDirty[2];
     
     dataIn[0] = guichet / 10;
@@ -78,7 +91,7 @@ void updatePortA(char data) {
 
 void sendDataToSlave(char id, char* data) {
     for (int i = 0; i < 7; ++i) {
-        __delay_ms(sendDataTime);
+        _delay(sendDataTime);
         if (i == 0) {
             updatePortA(id);
             PORTBbits.RB4 = 0;
@@ -87,21 +100,21 @@ void sendDataToSlave(char id, char* data) {
         else {
             updatePortA(data[i]);
         }
-        __delay_ms(holdTime);
+        _delay(holdTime);
     }
 }
 
 void updateDisplay(char id) {
-    __delay_ms(sendDataTime);
+    _delay(sendDataTime);
     updatePortA(id);
     PORTBbits.RB4 = 1;
     PORTBbits.RB3 = 1;
-    __delay_ms(holdTime);
+    _delay(holdTime);
 }
 
 void triggerBuzzer() {
     PORTAbits.RA4 = 1;
-    __delay_ms(buzzerTime);
+    _delay(buzzerTime);
     PORTAbits.RA4 = 0;
 }
 
@@ -148,6 +161,9 @@ void handleBtnPressed() {
     dataSlave2[4] = 0x02;
     dataSlave2[5] = 0x05;
     
+    sendDataToSlave(slave1, dataSlave1);
+    sendDataToSlave(slave2, dataSlave2);
+    
     updateDisplay(slave1);
     updateDisplay(slave2);
     
@@ -160,7 +176,7 @@ void handleBtnPressed() {
 void interrupt int_handler() {
     if (PIR1bits.RCIF) 
         handleWifiData();
-    else if (INTCONbits.INTF)
+    if (INTCONbits.INTF)
         handleBtnPressed();
 }
 
@@ -168,15 +184,16 @@ void interrupt int_handler() {
 void main(void) {
     TRISA      = 0b11100000;
     TRISB      = 0b11100011;
-    INTCON     = 0b11000000;
+    INTCON     = 0b11010000;
     PIE1       = 0b00110000;
-    OPTION_REG = 0b11010011;
+    OPTION_REG = 0b10010000;
+    PCONbits.OSCF = 0;
+
+    //TXSTA      = 0b00000000;
+    //RCSTA      = 0b00000000;
     
-    TXSTA      = 0b00000000;
-    RCSTA      = 0b00000000;
-    
-    PORTA      = 0b00000000;
-    PORTB      = 0b00000001;
+    PORTA      = 0;
+    PORTB      = 0;
     
     while (1);
 }
