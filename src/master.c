@@ -24,13 +24,22 @@
 
 #include <xc.h>
 
-#define slave1          0x00
-#define slave2          0x0F
-#define sendDataTime    12
-#define holdTime        36
-#define buzzerTime      12000
-#define mask1           0b00001111
-#define mask2           0b11110000
+#define BAUD     "AT+CIOBAUD=9200#"
+#define SET_IP   "AT+CIPSTA_DEF=\"192.168.0.103\"#"
+#define RESET    "AT+RST#"
+#define STA_MODE "AT+CWMODE=1#"
+#define CONNECT  "AT+CWJAP=\"dlink\",\"\"#"
+#define MUX      "AT+CIPMUX=1#"
+#define SERVER   "AT+CIPSERVER=1,1000#"
+#define TX_TIME  600 //50ms
+
+#define SLAVE1          0x00
+#define SLAVE2          0x0F
+#define SEND_DATA_TIME  600   //50ms
+#define HOLD_TIME       1800  //150ms
+#define BUZZER_TIME     24000 //2s
+#define MASK1           0b00001111
+#define MASK2           0b11110000
 
 //----------GLOBAL_VARIABLES---------
 char dataSlave1[6] = {0x00};
@@ -50,6 +59,26 @@ char RX_Serial() {
     }
     
     return RCREG;
+}
+
+void TX_Serial(char* data) {
+    int i = 0;
+    while (data[i] != '#') {
+        while (!PIR1bits.TXIF);
+        TXREG = data[i];
+        i++;
+    }
+    _delay(TX_TIME);
+}
+
+void setupWifi() {
+    TX_Serial(BAUD);
+    TX_Serial(SET_IP);
+    TX_Serial(RESET);
+    TX_Serial(STA_MODE);
+    TX_Serial(CONNECT);
+    TX_Serial(MUX);
+    TX_Serial(SERVER);
 }
 
 char* getWifiData() {
@@ -84,14 +113,14 @@ short isEqual(char* data1, char* data2) {
 }
 
 void updatePortA(char data) {
-    char dataOut = mask1 & data;
-    char w = mask2 & PORTA;
+    char dataOut = MASK1 & data;
+    char w = MASK2 & PORTA;
     PORTA = dataOut | w;
 }
 
 void sendDataToSlave(char id, char* data) {
     for (int i = 0; i < 7; ++i) {
-        _delay(sendDataTime);
+        _delay(SEND_DATA_TIME);
         if (i == 0) {
             updatePortA(id);
             PORTBbits.RB4 = 0;
@@ -100,21 +129,21 @@ void sendDataToSlave(char id, char* data) {
         else {
             updatePortA(data[i]);
         }
-        _delay(holdTime);
+        _delay(HOLD_TIME);
     }
 }
 
 void updateDisplay(char id) {
-    _delay(sendDataTime);
+    _delay(SEND_DATA_TIME);
     updatePortA(id);
     PORTBbits.RB4 = 1;
     PORTBbits.RB3 = 1;
-    _delay(holdTime);
+    _delay(HOLD_TIME);
 }
 
 void triggerBuzzer() {
     PORTAbits.RA4 = 1;
-    _delay(buzzerTime);
+    _delay(BUZZER_TIME);
     PORTAbits.RA4 = 0;
 }
 
@@ -128,12 +157,12 @@ void handleWifiData() {
     char* dataIn = getWifiData();
     
     if (!isEqual(dataIn, dataSlave1)) {
-        sendDataToSlave(slave1, dataIn);
-        sendDataToSlave(slave2, dataSlave1);
+        sendDataToSlave(SLAVE1, dataIn);
+        sendDataToSlave(SLAVE2, dataSlave1);
     }
     
-    updateDisplay(slave1);
-    updateDisplay(slave2);
+    updateDisplay(SLAVE1);
+    updateDisplay(SLAVE2);
     
     triggerBuzzer();
     
@@ -161,11 +190,11 @@ void handleBtnPressed() {
     dataSlave2[4] = 0x02;
     dataSlave2[5] = 0x05;
     
-    sendDataToSlave(slave1, dataSlave1);
-    sendDataToSlave(slave2, dataSlave2);
+    sendDataToSlave(SLAVE1, dataSlave1);
+    sendDataToSlave(SLAVE2, dataSlave2);
     
-    updateDisplay(slave1);
-    updateDisplay(slave2);
+    updateDisplay(SLAVE1);
+    updateDisplay(SLAVE2);
     
     triggerBuzzer();
     
@@ -189,11 +218,13 @@ void main(void) {
     OPTION_REG = 0b10010000;
     PCONbits.OSCF = 0;
 
-    //TXSTA      = 0b00000000;
-    //RCSTA      = 0b00000000;
+    TXSTA      = 0b00100000;
+    RCSTA      = 0b10000000;
     
     PORTA      = 0;
     PORTB      = 0;
+    
+    setupWifi();
     
     while (1);
 }
