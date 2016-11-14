@@ -49,7 +49,7 @@ char counter[6] =
     0b00011111
 };
 char dataReceived[6] = {0x00};
-char dataOut[6] = {0x00, 0x01, 0x00, 0x06, 0x02, 0x05};
+char dataOut[6] = {0x00};
 char status = SYNC;
 char receiveCounter = 0x00;
 
