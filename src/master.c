@@ -10,7 +10,7 @@
 // 'C' source line config statements
 
 // CONFIG
-#pragma config FOSC = INTOSCCLK // Oscillator Selection bits (INTOSC oscillator: CLKOUT function on RA6/OSC2/CLKOUT pin, I/O function on RA7/OSC1/CLKIN)
+#pragma config FOSC = INTOSCIO  // Oscillator Selection bits (INTOSC oscillator: I/O function on RA6/OSC2/CLKOUT pin, I/O function on RA7/OSC1/CLKIN)
 #pragma config WDTE = OFF       // Watchdog Timer Enable bit (WDT disabled)
 #pragma config PWRTE = OFF      // Power-up Timer Enable bit (PWRT disabled)
 #pragma config MCLRE = OFF      // RA5/MCLR/VPP Pin Function Select bit (RA5/MCLR/VPP pin function is digital input, MCLR internally tied to VDD)
@@ -35,8 +35,8 @@
 
 #define SLAVE1          0x00
 #define SLAVE2          0x0F
-#define SEND_DATA_TIME  600   //50ms
-#define HOLD_TIME       1800  //150ms
+#define SEND_DATA_TIME  90   //7.5ms
+#define HOLD_TIME       342  //28.5ms
 #define BUZZER_TIME     24000 //2s
 #define MASK1           0b00001111
 #define MASK2           0b11110000
