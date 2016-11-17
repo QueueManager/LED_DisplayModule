@@ -24,20 +24,19 @@
 
 #include <xc.h>
 
-#define BAUD     "AT+CIOBAUD=9200#"
-#define SET_IP   "AT+CIPSTA_DEF=\"192.168.0.103\"#"
-#define RESET    "AT+RST#"
-#define STA_MODE "AT+CWMODE=1#"
-#define CONNECT  "AT+CWJAP=\"dlink\",\"\"#"
-#define MUX      "AT+CIPMUX=1#"
-#define SERVER   "AT+CIPSERVER=1,1000#"
-#define TX_TIME  600 //50ms
+#define SET_IP   "AT+CIPSTA_DEF=\"192.168.0.103\"\r\n#"
+#define RESET    "AT+RST\r\n#"
+#define STA_MODE "AT+CWMODE=1\r\n#"
+#define CONNECT  "AT+CWJAP_CUR=\"dlink\",\"\"\r\n#"
+#define MUX      "AT+CIPMUX=1\r\n#"
+#define SERVER   "AT+CIPSERVER=1,1000\r\n#"
+#define TX_TIME  50000 //50ms
 
 #define SLAVE1          0x00
 #define SLAVE2          0x0F
-#define SEND_DATA_TIME  90   //7.5ms
-#define HOLD_TIME       342  //28.5ms
-#define BUZZER_TIME     24000 //2s
+#define SEND_DATA_TIME  119   //7.5ms
+#define HOLD_TIME       431   //28.5ms
+#define BUZZER_TIME     50000 //50ms
 #define MASK1           0b00001111
 #define MASK2           0b11110000
 
@@ -72,7 +71,6 @@ void TX_Serial(char* data) {
 }
 
 void setupWifi() {
-    TX_Serial(BAUD);
     TX_Serial(SET_IP);
     TX_Serial(RESET);
     TX_Serial(STA_MODE);
@@ -143,6 +141,27 @@ void updateDisplay(char id) {
 
 void triggerBuzzer() {
     PORTAbits.RA4 = 1;
+    //500ms
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    //500ms
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
     _delay(BUZZER_TIME);
     PORTAbits.RA4 = 0;
 }
@@ -216,10 +235,15 @@ void main(void) {
     INTCON     = 0b11010000;
     PIE1       = 0b00110000;
     OPTION_REG = 0b10010000;
-    PCONbits.OSCF = 0;
+    PCONbits.OSCF = 1;
 
-    TXSTA      = 0b00100000;
-    RCSTA      = 0b10000000;
+    //wifi config
+    SPBRG = 12;
+    PIR1bits.RCIF = 0;
+    RCSTAbits.SPEN = 1;
+    RCSTAbits.CREN = 1;
+    TXSTAbits.SYNC = 0;
+    TXSTAbits.TXEN = 1;
     
     PORTA      = 0;
     PORTB      = 0;
