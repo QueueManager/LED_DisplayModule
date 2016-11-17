@@ -24,7 +24,7 @@
 
 #include <xc.h>
 
-#define ID              0x00 // or 0x0F to slave2
+#define ID              0x00 // 0x0F slave2 | 0x00 slave1
 #define COUNTER_MASK    0b10100000
 #define DATA_OUT_MASK1  0b00011110
 #define DATA_OUT_MASK2  0b11100001
@@ -33,13 +33,13 @@
 #define SYNC            0x00
 #define RECEIVE         0x01
 #define WAIT            0x02
-#define SYNC_TIME       253
-#define RECEIVE_TIME    216
-#define WAIT_TIME       134
-
+#define SYNC_TIME       197
+#define RECEIVE_TIME    239
+#define WAIT_TIME       54
+#define inverter(data) ((data&0x02)<<3)|((data&0x04)<<1)|((data&0x08)>>1)|((data&0x10)>>3)
 
 //----------GLOBAL_VARIABLES---------
-char counter[6] = 
+/*char counter[6] = 
 {
     0b01011110,
     0b01011101,
@@ -47,9 +47,18 @@ char counter[6] =
     0b01010111,
     0b01001111,
     0b00011111
+};*/
+char counter[6] = 
+{   
+    0b00011111,
+    0b01011011,
+    0b01011101,
+    0b01011110,
+    0b01010111,
+    0b01001111
 };
 char dataReceived[6] = {0x00};
-char dataOut[6] = {0x00};
+char dataOut[6] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06};
 char status = SYNC;
 char receiveCounter = 0x00;
 
@@ -95,6 +104,14 @@ void updateDisplay() {
     INTCONbits.INTE = 1;
 }
 
+//void inverter(char data) {
+//    asm("BCF data, 4");
+//_asm
+  //      BTFSS   data, 1
+   //     BSF     data, 4 
+//_endasm
+//}
+
 //------------INTERRUPTS-------------
 void startSyncDelay() {
     INTCONbits.INTE = 0;
@@ -136,28 +153,59 @@ void interrupt int_handler() {
         handleTimeOut();
 }
 
+void delay()
+{
+    for (int p=0 ; p < 50 ; p++)
+    {
+        p = p + 0 ;
+    }
+}
+
+char hash_func(char i)
+{
+    char j=0;
+    if(i == 0)
+        j = 1;
+    if(i == 1)
+        j = 0;
+    if(i == 2)
+        j = 3;
+    if(i == 3)
+        j = 4;
+    if(i == 4)
+        j = 5;
+    if(i == 5)
+        j = 2;
+    
+    return j;
+}
+
 void main(void) {
     //setup
     TRISA      = 0b10100000;
     TRISB      = 0b11100001;
     INTCON     = 0b10010000;
     OPTION_REG = 0b11010000;
-    PCONbits.OSCF = 0;
+    PCONbits.OSCF = 1;
     
     PORTA = 0x00;
     PORTB = 0x00;
     
-    int i = 0;
+    char i = 0;
+    char j;
     while (1) {
         if (i >= 6)
             i = 0;
         
+        j = i;
         //counter routine
         PORTA = (PORTA & COUNTER_MASK) | counter[i];
-
+        
+        delay();
+        
         //display data
-        PORTB = (PORTB & DATA_OUT_MASK2) | ((dataOut[i] << 1) & DATA_OUT_MASK1);
+        PORTB = (PORTB & DATA_OUT_MASK2) | ( inverter(dataOut[j] << 1) & DATA_OUT_MASK1);
             
-        i++;
+        ++i;
     }
 }
