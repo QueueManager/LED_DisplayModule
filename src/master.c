@@ -34,8 +34,8 @@
 
 #define SLAVE1          0x00
 #define SLAVE2          0x0F
-#define SEND_DATA_TIME  119   //7.5ms
-#define HOLD_TIME       431   //28.5ms
+#define SEND_DATA_TIME  44   //31
+#define HOLD_TIME       206   //19
 #define BUZZER_TIME     50000 //50ms
 #define MASK1           0b00001111
 #define MASK2           0b11110000
@@ -91,12 +91,13 @@ char* getWifiData() {
     long int password = dataInDirty[1] << 8;
     password = password | dataInDirty[2];
     
+    /*
     dataIn[0] = guichet / 10;
     dataIn[1] = guichet % 10;
     dataIn[2] = password / 1000;
     dataIn[3] = (password % 1000) / 100;
     dataIn[4] = ((password % 1000) % 100) / 10;
-    dataIn[5] = (((password % 1000) % 100) % 10);
+    dataIn[5] = (((password % 1000) % 100) % 10);*/
     
     dataInCounter = 0;
     return dataIn;
@@ -129,6 +130,7 @@ void sendDataToSlave(char id, char* data) {
         }
         _delay(HOLD_TIME);
     }
+    PORTBbits.RB3 = 0;
 }
 
 void updateDisplay(char id) {
@@ -137,10 +139,55 @@ void updateDisplay(char id) {
     PORTBbits.RB4 = 1;
     PORTBbits.RB3 = 1;
     _delay(HOLD_TIME);
+    PORTBbits.RB3 = 0;
 }
 
 void triggerBuzzer() {
     PORTAbits.RA4 = 1;
+    //500ms
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    //500ms
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    //500ms
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    //500ms
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
+    _delay(BUZZER_TIME);
     //500ms
     _delay(BUZZER_TIME);
     _delay(BUZZER_TIME);
@@ -195,19 +242,19 @@ void handleBtnPressed() {
     INTCONbits.INTE = 0;
     INTCONbits.INTF = 0;
     
-    dataSlave1[0] = 0x00;
-    dataSlave1[1] = 0x01;
-    dataSlave1[2] = 0x01;
-    dataSlave1[3] = 0x07;
-    dataSlave1[4] = 0x03;
-    dataSlave1[5] = 0x09;
+    dataSlave1[0] = 0x04;
+    dataSlave1[1] = 0x04;
+    dataSlave1[2] = 0x04;
+    dataSlave1[3] = 0x04;
+    dataSlave1[4] = 0x04;
+    dataSlave1[5] = 0x04;
 
-    dataSlave2[0] = 0x00;
-    dataSlave2[1] = 0x02;
-    dataSlave2[2] = 0x00;
-    dataSlave2[3] = 0x06;
-    dataSlave2[4] = 0x02;
-    dataSlave2[5] = 0x05;
+    dataSlave2[0] = 0x03;
+    dataSlave2[1] = 0x03;
+    dataSlave2[2] = 0x03;
+    dataSlave2[3] = 0x03;
+    dataSlave2[4] = 0x03;
+    dataSlave2[5] = 0x03;
     
     sendDataToSlave(SLAVE1, dataSlave1);
     sendDataToSlave(SLAVE2, dataSlave2);
@@ -215,7 +262,7 @@ void handleBtnPressed() {
     updateDisplay(SLAVE1);
     updateDisplay(SLAVE2);
     
-    triggerBuzzer();
+    //triggerBuzzer();
     
     PIE1bits.RCIE = 1;
     INTCONbits.INTE = 1;
