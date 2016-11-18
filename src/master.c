@@ -33,17 +33,16 @@
 #define TX_TIME  50000 //50ms
 
 #define SLAVE1          0x00
-#define SLAVE2          0x0F
-#define SEND_DATA_TIME  44   //31
-#define HOLD_TIME       206   //19
-#define BUZZER_TIME     50000 //50ms
+#define SLAVE2          0x01
+#define HALF_HOLD_TIME  30000   //30ms
 #define MASK1           0b00001111
 #define MASK2           0b11110000
 
 //----------GLOBAL_VARIABLES---------
 char dataSlave1[6] = {0x00};
-char dataSlave2[6] = {0x00};
+char dataSlave2[3][6];
 char dataInCounter = 0;
+char j = 0;
 
 //------------------ROUTINES----------------
 char RX_Serial() {
@@ -112,105 +111,43 @@ short isEqual(char* data1, char* data2) {
 }
 
 void updatePortA(char data) {
-    char dataOut = MASK1 & data;
+    char three = data & 0b00001110; 
+    char one   = (data & 0b00000001) << 7;
+    char dataOut = MASK1 & (three|one);
     char w = MASK2 & PORTA;
+    
     PORTA = dataOut | w;
 }
 
+void delaySlave(char time)
+{
+    char total = time*50;
+    for (int p=0 ; p < total ; p++)
+    {
+        p = p + 0 ;
+    }
+}
+
 void sendDataToSlave(char id, char* data) {
-    for (int i = 0; i < 7; ++i) {
-        _delay(SEND_DATA_TIME);
-        if (i == 0) {
-            updatePortA(id);
-            PORTBbits.RB4 = 0;
-            PORTBbits.RB3 = 1;
-        }
-        else {
-            updatePortA(data[i]);
-        }
-        _delay(HOLD_TIME);
+    PORTBbits.RB4 = id;
+    for (int i = 0; i < 6; ++i) {
+        PORTBbits.RB3 = 0;
+        updatePortA(data[i]);
+        delaySlave(50);
+        delaySlave(50);
+        delaySlave(50);
+        delaySlave(50);
+        delaySlave(50);
+        delaySlave(50);
+        PORTBbits.RB3 = 1;
+        delaySlave(50);
+        delaySlave(50);
+        delaySlave(50);
+        delaySlave(50);
+        delaySlave(50);
+        delaySlave(50);
     }
     PORTBbits.RB3 = 0;
-}
-
-void updateDisplay(char id) {
-    _delay(SEND_DATA_TIME);
-    updatePortA(id);
-    PORTBbits.RB4 = 1;
-    PORTBbits.RB3 = 1;
-    _delay(HOLD_TIME);
-    PORTBbits.RB3 = 0;
-}
-
-void triggerBuzzer() {
-    PORTAbits.RA4 = 1;
-    //500ms
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    //500ms
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    //500ms
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    //500ms
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    //500ms
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    //500ms
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    _delay(BUZZER_TIME);
-    PORTAbits.RA4 = 0;
 }
 
 //------------INTERRUPTS-------------
@@ -227,42 +164,40 @@ void handleWifiData() {
         sendDataToSlave(SLAVE2, dataSlave1);
     }
     
-    updateDisplay(SLAVE1);
-    updateDisplay(SLAVE2);
-    
-    triggerBuzzer();
-    
     PIE1bits.RCIE = 1;
     INTCONbits.INTE = 1;
 }
 
-void handleBtnPressed() {
+void handleBtnPressed(int j) {
     PIE1bits.RCIE = 0;
     PIR1bits.RCIF = 0;
     INTCONbits.INTE = 0;
     INTCONbits.INTF = 0;
     
-    dataSlave1[0] = 0x04;
-    dataSlave1[1] = 0x04;
-    dataSlave1[2] = 0x04;
-    dataSlave1[3] = 0x04;
-    dataSlave1[4] = 0x04;
-    dataSlave1[5] = 0x04;
+    //dataSlave1[0] = 0x00;
+    //dataSlave1[1] = 0x02;
+    //dataSlave1[2] = 0x01;
+    //dataSlave1[3] = 0x04;
+    //dataSlave1[4] = 0x07;
+    //dataSlave1[5] = 0x09;
 
-    dataSlave2[0] = 0x03;
-    dataSlave2[1] = 0x03;
-    dataSlave2[2] = 0x03;
-    dataSlave2[3] = 0x03;
-    dataSlave2[4] = 0x03;
-    dataSlave2[5] = 0x03;
+    for (int i = 0; i < 6; i++) {
+        dataSlave2[j][i] = ((j*2+i)%4)*2+1;
+    }
     
-    sendDataToSlave(SLAVE1, dataSlave1);
-    sendDataToSlave(SLAVE2, dataSlave2);
+    sendDataToSlave(SLAVE2, dataSlave2[j]);
+    /*delaySlave(50);
+    delaySlave(50);
+    delaySlave(50);
+    delaySlave(50);
+    delaySlave(50);
     
-    updateDisplay(SLAVE1);
-    updateDisplay(SLAVE2);
-    
-    //triggerBuzzer();
+    delaySlave(50);
+    delaySlave(50);
+    delaySlave(50);
+    delaySlave(50);
+    delaySlave(50);*/
+    //sendDataToSlave(SLAVE1, dataSlave1);
     
     PIE1bits.RCIE = 1;
     INTCONbits.INTE = 1;
@@ -271,31 +206,22 @@ void handleBtnPressed() {
 void interrupt int_handler() {
     if (PIR1bits.RCIF) 
         handleWifiData();
-    if (INTCONbits.INTF)
-        handleBtnPressed();
+    else if (INTCONbits.INTF) {
+        j = (j+1)%3;
+        delaySlave(50);
+        delaySlave(50);
+        handleBtnPressed(j);
+    }
 }
 
 //------------------MAIN----------------
 void main(void) {
-    TRISA      = 0b11100000;
+    TRISA      = 0b01100001;
     TRISB      = 0b11100011;
     INTCON     = 0b11010000;
     PIE1       = 0b00110000;
     OPTION_REG = 0b10010000;
     PCONbits.OSCF = 1;
 
-    //wifi config
-    SPBRG = 12;
-    PIR1bits.RCIF = 0;
-    RCSTAbits.SPEN = 1;
-    RCSTAbits.CREN = 1;
-    TXSTAbits.SYNC = 0;
-    TXSTAbits.TXEN = 1;
-    
-    PORTA      = 0;
-    PORTB      = 0;
-    
-    setupWifi();
-    
-    while (1);
+    while (1){}
 }
