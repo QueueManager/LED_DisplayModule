@@ -33,7 +33,7 @@
 #define SYNC            0x00
 #define RECEIVE         0x01
 #define WAIT            0x02
-#define SYNC_TIME       197
+#define SYNC_TIME       254
 #define RECEIVE_TIME    239
 #define WAIT_TIME       54
 #define inverter(data) ((data&0x02)<<3)|((data&0x04)<<1)|((data&0x08)>>1)|((data&0x10)>>3)
@@ -58,7 +58,7 @@ char counter[6] =
     0b01001111
 };
 char dataReceived[6] = {0x00};
-char dataOut[6] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06};
+char dataOut[6] = {0x08, 0x08, 0x08, 0x08, 0x08, 0x08};
 char status = SYNC;
 char receiveCounter = 0x00;
 
@@ -78,15 +78,17 @@ void receiveData() {
         return;
     }
     
-    if (receiveCounter == 0) {
-        if (getDataIn() != ID)
-            return;
-        else
-            receiveCounter++;
+    if (receiveCounter != 0) {
+        dataOut[receiveCounter-1] = /*0x07;*/getDataIn();
+        receiveCounter++;
     }
     else {
-        dataReceived[receiveCounter-1] = getDataIn();
-        receiveCounter++;
+        if (getDataIn() != ID) {
+            return;
+        }
+        else {
+            receiveCounter++;
+        }
     }
     
     TMR0 = RECEIVE_TIME;
@@ -97,9 +99,9 @@ void updateDisplay() {
     if (getDataIn() != ID)
         return;
     
-    for (int i = 0; i < 6; ++i) {
-        dataOut[i] = dataReceived[i];
-    }
+    //for (int i = 0; i < 6; ++i) {
+        //dataOut[i] = dataReceived[i];
+    //}
     
     INTCONbits.INTE = 1;
 }
